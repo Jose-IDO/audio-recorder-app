@@ -18,6 +18,9 @@ import {
 import {VoiceNote} from '../types/VoiceNote';
 import VoiceNoteItem from '../components/VoiceNoteItem';
 import PlaybackControls from '../components/PlaybackControls';
+import SearchBar from '../components/SearchBar';
+import SettingsButton from '../components/SettingsButton';
+import SettingsScreen from './SettingsScreen';
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
@@ -25,14 +28,29 @@ const RecordingScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingPath, setRecordingPath] = useState('');
   const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
+  const [filteredNotes, setFilteredNotes] = useState<VoiceNote[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [currentPosition, setCurrentPosition] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
+  const [showSettings, setShowSettings] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
 
   useEffect(() => {
     loadVoiceNotes();
   }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredNotes(voiceNotes);
+    } else {
+      const filtered = voiceNotes.filter(note =>
+        note.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+      setFilteredNotes(filtered);
+    }
+  }, [searchQuery, voiceNotes]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -66,7 +84,10 @@ const RecordingScreen = () => {
 
   const loadVoiceNotes = async () => {
     const notes = await getVoiceNotes();
-    setVoiceNotes(notes);
+    const sortedNotes = notes.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+    setVoiceNotes(sortedNotes);
   };
 
   const checkPermissions = async () => {
@@ -239,10 +260,21 @@ const RecordingScreen = () => {
     );
   };
 
+  if (showSettings) {
+    return (
+      <SettingsScreen
+        onBack={() => setShowSettings(false)}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Voice Recorder</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>Voice Recorder</Text>
+          <SettingsButton onPress={() => setShowSettings(true)} />
+        </View>
         <Text style={styles.status}>
           {isRecording ? 'Recording...' : 'Ready to Record'}
         </Text>
@@ -256,7 +288,9 @@ const RecordingScreen = () => {
       </View>
       <View style={styles.listContainer}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Voice Notes ({voiceNotes.length})</Text>
+          <Text style={styles.listTitle}>
+            Voice Notes ({filteredNotes.length})
+          </Text>
           <TouchableOpacity
             style={styles.newButton}
             onPress={() => {
@@ -267,12 +301,17 @@ const RecordingScreen = () => {
             <Text style={styles.newButtonText}>+ New</Text>
           </TouchableOpacity>
         </View>
+        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
         <FlatList
-          data={voiceNotes}
+          data={filteredNotes}
           renderItem={renderVoiceNote}
           keyExtractor={item => item.id}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No voice notes yet</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery
+                ? 'No voice notes found'
+                : 'No voice notes yet'}
+            </Text>
           }
         />
       </View>
@@ -289,10 +328,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 10,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 10,
     color: '#333',
   },
   status: {
