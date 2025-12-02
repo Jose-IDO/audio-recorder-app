@@ -86,11 +86,16 @@ const RecordingScreen = () => {
 
   const checkPermissions = async () => {
     const permissionResponse = await Audio.getPermissionsAsync();
-    if (permissionResponse.status !== 'granted') {
+    if (permissionResponse.status === 'granted') {
+      return true;
+    }
+    
+    if (permissionResponse.canAskAgain) {
       const newPermissionResponse = await Audio.requestPermissionsAsync();
       return newPermissionResponse.status === 'granted';
     }
-    return true;
+    
+    return false;
   };
 
   const startRecording = async () => {

@@ -8,18 +8,34 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    requestPermissions();
+    checkAndRequestPermissions();
   }, []);
 
-  const requestPermissions = async () => {
+  const checkAndRequestPermissions = async () => {
     try {
-      const permissionResponse = await Audio.requestPermissionsAsync();
+      const permissionResponse = await Audio.getPermissionsAsync();
+      
       if (permissionResponse.status === 'granted') {
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
         });
         setPermissionsGranted(true);
+        setIsLoading(false);
+        return;
+      }
+
+      if (permissionResponse.canAskAgain) {
+        const newPermissionResponse = await Audio.requestPermissionsAsync();
+        if (newPermissionResponse.status === 'granted') {
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+          });
+          setPermissionsGranted(true);
+        } else {
+          setPermissionsGranted(false);
+        }
       } else {
         setPermissionsGranted(false);
       }
@@ -35,7 +51,7 @@ const App = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Requesting permissions...</Text>
+          <Text style={styles.loadingText}>Checking permissions...</Text>
         </View>
       </SafeAreaView>
     );
