@@ -1,14 +1,34 @@
-import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, Alert} from 'react-native';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  FlatList,
+} from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {Platform} from 'react-native';
+import {saveVoiceNote, getVoiceNotes} from '../services/StorageService';
+import {VoiceNote} from '../types/VoiceNote';
+import VoiceNoteItem from '../components/VoiceNoteItem';
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
 const RecordingScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingPath, setRecordingPath] = useState('');
+  const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
+
+  useEffect(() => {
+    loadVoiceNotes();
+  }, []);
+
+  const loadVoiceNotes = async () => {
+    const notes = await getVoiceNotes();
+    setVoiceNotes(notes);
+  };
 
   const checkPermissions = async () => {
     const permission =
@@ -39,9 +59,10 @@ const RecordingScreen = () => {
     }
 
     try {
+      const timestamp = Date.now();
       const path = Platform.select({
-        ios: 'voiceNote.m4a',
-        android: 'sdcard/voiceNote.mp4',
+        ios: `voiceNote_${timestamp}.m4a`,
+        android: `sdcard/voiceNote_${timestamp}.mp4`,
       });
 
       const result = await audioRecorderPlayer.startRecorder(path);
@@ -60,7 +81,19 @@ const RecordingScreen = () => {
       audioRecorderPlayer.removeRecordBackListener();
       setIsRecording(false);
 
-      Alert.alert('Recording Saved', `Saved to: ${result}`);
+      const timestamp = Date.now();
+      const newNote: VoiceNote = {
+        id: timestamp.toString(),
+        name: `Voice Note ${new Date(timestamp).toLocaleDateString()}`,
+        path: result,
+        date: new Date(timestamp).toISOString(),
+        duration: 0,
+      };
+
+      await saveVoiceNote(newNote);
+      await loadVoiceNotes();
+
+      Alert.alert('Success', 'Recording saved');
       setRecordingPath('');
     } catch (error) {
       Alert.alert('Error', 'Failed to stop recording');
@@ -75,9 +108,20 @@ const RecordingScreen = () => {
     }
   };
 
+  const renderVoiceNote = ({item}: {item: VoiceNote}) => {
+    return (
+      <VoiceNoteItem
+        note={item}
+        onPress={() => {
+          Alert.alert('Voice Note', item.name);
+        }}
+      />
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <View style={styles.header}>
         <Text style={styles.title}>Voice Recorder</Text>
         <Text style={styles.status}>
           {isRecording ? 'Recording...' : 'Ready to Record'}
@@ -90,6 +134,17 @@ const RecordingScreen = () => {
           </Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.listContainer}>
+        <Text style={styles.listTitle}>Voice Notes ({voiceNotes.length})</Text>
+        <FlatList
+          data={voiceNotes}
+          renderItem={renderVoiceNote}
+          keyExtractor={item => item.id}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No voice notes yet</Text>
+          }
+        />
+      </View>
     </View>
   );
 };
@@ -99,21 +154,20 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
     alignItems: 'center',
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 10,
     color: '#333',
   },
   status: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   recordButton: {
     width: 120,
@@ -135,6 +189,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  listContainer: {
+    flex: 1,
+    marginTop: 20,
+  },
+  listTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 10,
+    color: '#333',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 20,
   },
 });
 
