@@ -41,3 +41,16 @@ export const renameVoiceNote = async (
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
 };
 
+export const toggleFavoriteVoiceNote = async (
+  id: string,
+): Promise<void> => {
+  const existingNotes = await getVoiceNotes();
+  const updatedNotes = existingNotes.map(note => {
+    if (note.id === id) {
+      return {...note, isFavorite: !note.isFavorite};
+    }
+    return note;
+  });
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
+};
+

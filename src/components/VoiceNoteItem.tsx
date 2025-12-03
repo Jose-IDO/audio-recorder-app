@@ -8,6 +8,7 @@ interface VoiceNoteItemProps {
   onPress: () => void;
   onDelete?: () => void;
   onRename?: () => void;
+  onToggleFavorite?: () => void;
 }
 
 const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({
@@ -15,6 +16,7 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({
   onPress,
   onDelete,
   onRename,
+  onToggleFavorite,
 }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -65,6 +67,26 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({
           <Text style={styles.date}>{formatDate(note.date)}</Text>
         </View>
         <View style={styles.actionsContainer}>
+          {onToggleFavorite && (
+            <TouchableOpacity
+              style={[
+                styles.favoriteButton,
+                note.isFavorite && styles.favoriteButtonActive,
+              ]}
+              onPress={e => {
+                e.stopPropagation();
+                onToggleFavorite();
+              }}
+              activeOpacity={0.7}>
+              <Text
+                style={[
+                  styles.favoriteText,
+                  note.isFavorite && styles.favoriteTextActive,
+                ]}>
+                {note.isFavorite ? 'Favorited' : 'Favorite'}
+              </Text>
+            </TouchableOpacity>
+          )}
           {onRename && (
             <TouchableOpacity
               style={styles.renameButton}
@@ -151,6 +173,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginLeft: 12,
+  },
+  favoriteButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+  },
+  favoriteButtonActive: {
+    borderColor: '#facc15',
+    backgroundColor: '#fef9c3',
+  },
+  favoriteText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  favoriteTextActive: {
+    color: '#854d0e',
   },
   renameButton: {
     paddingHorizontal: 12,

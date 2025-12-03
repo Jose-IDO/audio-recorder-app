@@ -4,5 +4,6 @@ export interface VoiceNote {
   path: string;
   date: string;
   duration: number;
+  isFavorite?: boolean;
 }
 

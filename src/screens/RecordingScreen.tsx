@@ -14,6 +14,7 @@ import {
   getVoiceNotes,
   deleteVoiceNote,
   renameVoiceNote,
+  toggleFavoriteVoiceNote,
 } from '../services/StorageService';
 import {VoiceNote} from '../types/VoiceNote';
 import VoiceNoteItem from '../components/VoiceNoteItem';
@@ -42,6 +43,7 @@ const RecordingScreen = () => {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameNoteId, setRenameNoteId] = useState<string | null>(null);
   const [renameText, setRenameText] = useState('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   useEffect(() => {
     initializeApp();
@@ -59,15 +61,19 @@ const RecordingScreen = () => {
   };
 
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredNotes(voiceNotes);
+    const query = searchQuery.trim().toLowerCase();
+    const baseList = showFavoritesOnly
+      ? voiceNotes.filter(note => note.isFavorite)
+      : voiceNotes;
+    if (query === '') {
+      setFilteredNotes(baseList);
     } else {
-      const filtered = voiceNotes.filter(note =>
-        note.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      const filtered = baseList.filter(note =>
+        note.name.toLowerCase().includes(query),
       );
       setFilteredNotes(filtered);
     }
-  }, [searchQuery, voiceNotes]);
+  }, [searchQuery, voiceNotes, showFavoritesOnly]);
 
   useEffect(() => {
     return () => {
@@ -325,6 +331,15 @@ const RecordingScreen = () => {
     setRenameText('');
   };
 
+  const handleToggleFavorite = async (id: string) => {
+    try {
+      await toggleFavoriteVoiceNote(id);
+      await loadVoiceNotes();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update favorite');
+    }
+  };
+
   const renderVoiceNote = ({item}: {item: VoiceNote}) => {
     const isCurrentlyPlaying = currentPlayingId === item.id && (isPlaying || isPaused);
 
@@ -351,6 +366,7 @@ const RecordingScreen = () => {
             );
           }}
           onRename={() => handleRenameNote(item.id)}
+          onToggleFavorite={() => handleToggleFavorite(item.id)}
         />
         {isCurrentlyPlaying && (
           <PlaybackControls
@@ -408,9 +424,41 @@ const RecordingScreen = () => {
       </View>
       <View style={styles.listContainer}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>
-            Voice Notes ({filteredNotes.length})
-          </Text>
+          <View style={styles.listHeaderLeft}>
+            <Text style={styles.listTitle}>Voice Notes</Text>
+            <View style={styles.chipRow}>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  !showFavoritesOnly && styles.chipActive,
+                ]}
+                onPress={() => setShowFavoritesOnly(false)}
+                activeOpacity={0.8}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    !showFavoritesOnly && styles.chipTextActive,
+                  ]}>
+                  All
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  showFavoritesOnly && styles.chipActive,
+                ]}
+                onPress={() => setShowFavoritesOnly(true)}
+                activeOpacity={0.8}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    showFavoritesOnly && styles.chipTextActive,
+                  ]}>
+                  Favorites
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           <TouchableOpacity
             style={styles.newButton}
             onPress={() => {
@@ -513,11 +561,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 8,
   },
+  listHeaderLeft: {
+    flexDirection: 'column',
+    gap: 4,
+  },
   listTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
     letterSpacing: -0.3,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+  },
+  chipActive: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#dbeafe',
+  },
+  chipText: {
+    fontSize: 12,
+    color: '#4b5563',
+    fontWeight: '500',
+  },
+  chipTextActive: {
+    color: '#1d4ed8',
   },
   newButton: {
     backgroundColor: '#3b82f6',
