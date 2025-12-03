@@ -8,6 +8,7 @@ interface PlaybackControlsProps {
   isPlaying: boolean;
   currentPosition: string;
   duration: string;
+  progress: number;
   onPlayPause: () => void;
   onStop: () => void;
 }
@@ -16,11 +17,17 @@ const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   isPlaying,
   currentPosition,
   duration,
+  progress,
   onPlayPause,
   onStop,
 }) => {
   return (
     <View style={styles.container}>
+      <View style={styles.progressBarContainer}>
+        <View style={styles.progressBarBackground}>
+          <View style={[styles.progressBarFill, {width: `${progress * 100}%`}]} />
+        </View>
+      </View>
       <View style={styles.timeContainer}>
         <Text style={styles.timeText}>{currentPosition}</Text>
         <View style={styles.separator} />
@@ -59,6 +66,20 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  progressBarContainer: {
+    marginBottom: 12,
+  },
+  progressBarBackground: {
+    height: 6,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#3b82f6',
+    borderRadius: 3,
   },
   timeContainer: {
     flexDirection: 'row',

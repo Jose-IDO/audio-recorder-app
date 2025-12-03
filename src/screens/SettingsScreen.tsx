@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,16 @@ import {
 import SettingsIcon from '../components/icons/SettingsIcon';
 
 interface SettingsScreenProps {
+  playbackSpeed: number;
+  onSpeedChange: (speed: number) => void;
   onBack: () => void;
 }
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({onBack}) => {
-  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
-
+const SettingsScreen: React.FC<SettingsScreenProps> = ({
+  playbackSpeed,
+  onSpeedChange,
+  onBack,
+}) => {
   const handleFeedback = () => {
     Alert.alert(
       'Feedback',
@@ -52,7 +56,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({onBack}) => {
                 styles.speedButton,
                 playbackSpeed === speed && styles.speedButtonActive,
               ]}
-              onPress={() => setPlaybackSpeed(speed)}
+              onPress={() => onSpeedChange(speed)}
               activeOpacity={0.7}>
               <Text
                 style={[

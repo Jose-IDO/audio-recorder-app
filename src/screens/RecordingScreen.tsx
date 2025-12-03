@@ -33,7 +33,9 @@ const RecordingScreen = () => {
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [currentPosition, setCurrentPosition] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
+  const [progress, setProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
 
   useEffect(() => {
     initializeApp();
@@ -71,6 +73,12 @@ const RecordingScreen = () => {
       }
     };
   }, [sound, recording]);
+
+  useEffect(() => {
+    if (sound && isPlaying) {
+      sound.setRateAsync(playbackSpeed, true);
+    }
+  }, [playbackSpeed, sound, isPlaying]);
 
   const loadVoiceNotes = async () => {
     const notes = await getVoiceNotes();
@@ -202,7 +210,7 @@ const RecordingScreen = () => {
     try {
       const {sound: newSound} = await Audio.Sound.createAsync(
         {uri: note.path},
-        {shouldPlay: true},
+        {shouldPlay: true, rate: playbackSpeed},
       );
 
       setSound(newSound);
@@ -211,21 +219,27 @@ const RecordingScreen = () => {
 
       newSound.setOnPlaybackStatusUpdate(status => {
         if (status.isLoaded) {
-          const minutes = Math.floor((status.positionMillis || 0) / 1000 / 60);
-          const seconds = Math.floor(((status.positionMillis || 0) / 1000) % 60);
+          const positionMillis = status.positionMillis || 0;
+          const durationMillis = status.durationMillis || 1;
+          
+          const minutes = Math.floor(positionMillis / 1000 / 60);
+          const seconds = Math.floor((positionMillis / 1000) % 60);
           setCurrentPosition(
             `${minutes.toString().padStart(2, '0')}:${seconds
               .toString()
               .padStart(2, '0')}`,
           );
 
-          const totalMinutes = Math.floor((status.durationMillis || 0) / 1000 / 60);
-          const totalSeconds = Math.floor(((status.durationMillis || 0) / 1000) % 60);
+          const totalMinutes = Math.floor(durationMillis / 1000 / 60);
+          const totalSeconds = Math.floor((durationMillis / 1000) % 60);
           setDuration(
             `${totalMinutes.toString().padStart(2, '0')}:${totalSeconds
               .toString()
               .padStart(2, '0')}`,
           );
+
+          const progressValue = durationMillis > 0 ? positionMillis / durationMillis : 0;
+          setProgress(progressValue);
 
           if (status.didJustFinish) {
             stopPlayback();
@@ -247,6 +261,7 @@ const RecordingScreen = () => {
     setCurrentPlayingId(null);
     setCurrentPosition('00:00');
     setDuration('00:00');
+    setProgress(0);
   };
 
   const handleDeleteNote = async (id: string) => {
@@ -304,6 +319,7 @@ const RecordingScreen = () => {
             isPlaying={isPlaying}
             currentPosition={currentPosition}
             duration={duration}
+            progress={progress}
             onPlayPause={() => playVoiceNote(item)}
             onStop={stopPlayback}
           />
@@ -315,6 +331,8 @@ const RecordingScreen = () => {
   if (showSettings) {
     return (
       <SettingsScreen
+        playbackSpeed={playbackSpeed}
+        onSpeedChange={setPlaybackSpeed}
         onBack={() => setShowSettings(false)}
       />
     );
