@@ -12,9 +12,11 @@ A modern React Native application built with Expo for recording, managing, and p
 ### Core Functionality
 - **Audio Recording**: Record high-quality voice notes using your device's microphone
 - **Voice Note Management**: View all your recordings in a clean, organized list
-- **Playback Controls**: Play, pause, and stop recordings with visual feedback
+- **Playback Controls**: Play, pause, and stop recordings with visual feedback and a progress bar
 - **Delete Functionality**: Remove unwanted voice notes with confirmation dialogs
 - **Search**: Quickly find specific voice notes by name
+- **Rename Voice Notes**: Quickly rename any recording to keep your journal organized
+- **Favorite Voice Notes**: Mark important notes as favorites and filter to see only favorites
 - **Offline Support**: All recordings are stored locally on your device
 
 ### User Experience
@@ -22,6 +24,7 @@ A modern React Native application built with Expo for recording, managing, and p
 - **Permission Handling**: Permissions are requested only when needed (when you try to record)
 - **Smart Date Formatting**: Displays dates in a user-friendly format (Today, Yesterday, etc.)
 - **Settings Screen**: Customize playback speed and access support options
+- **Full-Screen Rename Overlay**: Renaming a note opens a focused overlay on top of the app
 
 ## Technology Stack
 
@@ -141,6 +144,18 @@ audio-recorder-app/
 2. Confirm the deletion in the dialog
 
 ### Searching Voice Notes
+### Favoriting Voice Notes
+
+1. Tap the **Favorite** button on any voice note
+2. A favorited note will show as **Favorited**
+3. Use the **All / Favorites** chips above the list to switch between all notes and only favorites
+
+### Renaming Voice Notes
+
+1. Tap the **Rename** button on a voice note
+2. A rename overlay appears on top of the app
+3. Enter the new name and tap **Save**
+4. The updated name is stored and used in lists and search
 
 1. Use the search bar at the top of the list
 2. Type to filter voice notes by name
@@ -225,7 +240,11 @@ For support, email: support@voicerecorder.com
 
 ## Version History
 
-- **v1.0.0** - Initial release
+- **v1.1.0**
+  - Added favorites for voice notes with All/Favorites filter
+  - Added rename overlay for editing note titles
+  - Improved playback experience with pause/resume and progress bar
+- **v1.0.0**
   - Basic recording functionality
   - Voice note management
   - Playback controls
