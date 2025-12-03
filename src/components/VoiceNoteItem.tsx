@@ -7,12 +7,14 @@ interface VoiceNoteItemProps {
   note: VoiceNote;
   onPress: () => void;
   onDelete?: () => void;
+  onRename?: () => void;
 }
 
 const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({
   note,
   onPress,
   onDelete,
+  onRename,
 }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -62,17 +64,30 @@ const VoiceNoteItem: React.FC<VoiceNoteItemProps> = ({
           </Text>
           <Text style={styles.date}>{formatDate(note.date)}</Text>
         </View>
-        {onDelete && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={e => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            activeOpacity={0.7}>
-            <DeleteIcon size={18} color="#fff" />
-          </TouchableOpacity>
-        )}
+        <View style={styles.actionsContainer}>
+          {onRename && (
+            <TouchableOpacity
+              style={styles.renameButton}
+              onPress={e => {
+                e.stopPropagation();
+                onRename();
+              }}
+              activeOpacity={0.7}>
+              <Text style={styles.renameText}>Rename</Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={e => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              activeOpacity={0.7}>
+              <DeleteIcon size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -131,6 +146,23 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '400',
   },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 12,
+  },
+  renameButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#3b82f6',
+  },
+  renameText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   deleteButton: {
     width: 36,
     height: 36,
@@ -138,7 +170,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
     shadowColor: '#ef4444',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.3,

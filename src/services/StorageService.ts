@@ -4,13 +4,9 @@ import {VoiceNote} from '../types/VoiceNote';
 const STORAGE_KEY = 'voice_notes';
 
 export const saveVoiceNote = async (note: VoiceNote): Promise<void> => {
-  try {
-    const existingNotes = await getVoiceNotes();
-    const updatedNotes = [...existingNotes, note];
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
-  } catch (error) {
-    throw new Error('Failed to save voice note');
-  }
+  const existingNotes = await getVoiceNotes();
+  const updatedNotes = [...existingNotes, note];
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
 };
 
 export const getVoiceNotes = async (): Promise<VoiceNote[]> => {
@@ -26,12 +22,22 @@ export const getVoiceNotes = async (): Promise<VoiceNote[]> => {
 };
 
 export const deleteVoiceNote = async (id: string): Promise<void> => {
-  try {
-    const existingNotes = await getVoiceNotes();
-    const updatedNotes = existingNotes.filter(note => note.id !== id);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
-  } catch (error) {
-    throw new Error('Failed to delete voice note');
-  }
+  const existingNotes = await getVoiceNotes();
+  const updatedNotes = existingNotes.filter(note => note.id !== id);
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
+};
+
+export const renameVoiceNote = async (
+  id: string,
+  newName: string,
+): Promise<void> => {
+  const existingNotes = await getVoiceNotes();
+  const updatedNotes = existingNotes.map(note => {
+    if (note.id === id) {
+      return {...note, name: newName};
+    }
+    return note;
+  });
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
 };
 

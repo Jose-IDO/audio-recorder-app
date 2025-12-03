@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   saveVoiceNote,
   getVoiceNotes,
   deleteVoiceNote,
+  renameVoiceNote,
 } from '../services/StorageService';
 import {VoiceNote} from '../types/VoiceNote';
 import VoiceNoteItem from '../components/VoiceNoteItem';
@@ -20,6 +21,7 @@ import PlaybackControls from '../components/PlaybackControls';
 import SearchBar from '../components/SearchBar';
 import SettingsButton from '../components/SettingsButton';
 import SettingsScreen from './SettingsScreen';
+import RenameModal from '../components/RenameModal';
 import MicIcon from '../components/icons/MicIcon';
 
 const RecordingScreen = () => {
@@ -30,12 +32,16 @@ const RecordingScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [currentPosition, setCurrentPosition] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
   const [progress, setProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameNoteId, setRenameNoteId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState('');
 
   useEffect(() => {
     initializeApp();
@@ -75,10 +81,10 @@ const RecordingScreen = () => {
   }, [sound, recording]);
 
   useEffect(() => {
-    if (sound && isPlaying) {
+    if (sound && isPlaying && !isPaused) {
       sound.setRateAsync(playbackSpeed, true);
     }
-  }, [playbackSpeed, sound, isPlaying]);
+  }, [playbackSpeed, sound, isPlaying, isPaused]);
 
   const loadVoiceNotes = async () => {
     const notes = await getVoiceNotes();
@@ -187,17 +193,17 @@ const RecordingScreen = () => {
   };
 
   const playVoiceNote = async (note: VoiceNote) => {
-    if (isPlaying && currentPlayingId === note.id) {
-      if (sound) {
-        const status = await sound.getStatusAsync();
-        if (status.isLoaded) {
-          if (status.isPlaying) {
-            await sound.pauseAsync();
-            setIsPlaying(false);
-          } else {
-            await sound.playAsync();
-            setIsPlaying(true);
-          }
+    if (sound && currentPlayingId === note.id) {
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded) {
+        if (status.isPlaying) {
+          await sound.pauseAsync();
+          setIsPlaying(false);
+          setIsPaused(true);
+        } else {
+          await sound.playAsync();
+          setIsPlaying(true);
+          setIsPaused(false);
         }
       }
       return;
@@ -215,6 +221,7 @@ const RecordingScreen = () => {
 
       setSound(newSound);
       setIsPlaying(true);
+      setIsPaused(false);
       setCurrentPlayingId(note.id);
 
       newSound.setOnPlaybackStatusUpdate(status => {
@@ -258,6 +265,7 @@ const RecordingScreen = () => {
       setSound(null);
     }
     setIsPlaying(false);
+    setIsPaused(false);
     setCurrentPlayingId(null);
     setCurrentPosition('00:00');
     setDuration('00:00');
@@ -288,8 +296,37 @@ const RecordingScreen = () => {
     }
   };
 
+  const handleRenameNote = (id: string) => {
+    const note = voiceNotes.find(n => n.id === id);
+    if (note) {
+      setRenameNoteId(id);
+      setRenameText(note.name);
+      setShowRenameModal(true);
+    }
+  };
+
+  const saveRename = async () => {
+    if (renameNoteId && renameText.trim()) {
+      try {
+        await renameVoiceNote(renameNoteId, renameText.trim());
+        await loadVoiceNotes();
+        setShowRenameModal(false);
+        setRenameNoteId(null);
+        setRenameText('');
+      } catch (error) {
+        Alert.alert('Error', 'Failed to rename voice note');
+      }
+    }
+  };
+
+  const cancelRename = () => {
+    setShowRenameModal(false);
+    setRenameNoteId(null);
+    setRenameText('');
+  };
+
   const renderVoiceNote = ({item}: {item: VoiceNote}) => {
-    const isCurrentlyPlaying = currentPlayingId === item.id && isPlaying;
+    const isCurrentlyPlaying = currentPlayingId === item.id && (isPlaying || isPaused);
 
     return (
       <View>
@@ -313,6 +350,7 @@ const RecordingScreen = () => {
               ],
             );
           }}
+          onRename={() => handleRenameNote(item.id)}
         />
         {isCurrentlyPlaying && (
           <PlaybackControls
@@ -340,6 +378,13 @@ const RecordingScreen = () => {
 
   return (
     <View style={styles.container}>
+      <RenameModal
+        visible={showRenameModal}
+        value={renameText}
+        onChangeText={setRenameText}
+        onCancel={cancelRename}
+        onSave={saveRename}
+      />
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.title}>Voice Recorder</Text>
