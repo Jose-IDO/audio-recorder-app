@@ -2,6 +2,11 @@
 
 A modern React Native application built with Expo for recording, managing, and playing back voice notes. This app provides a simple and intuitive interface for creating a digital voice journal.
 
+## Download
+
+**Download the app directly:**
+- [Download APK from Google Drive](https://drive.google.com/drive/folders/1cieRSInF1r5M4fzsMwlvyE1xs1voGPUt?usp=sharing)
+
 ## Features
 
 ### Core Functionality
