@@ -55,6 +55,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
+    zIndex: 9999,
+    elevation: 9999,
   },
   box: {
     width: '100%',
