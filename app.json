@@ -24,6 +24,14 @@
         "android.permission.READ_EXTERNAL_STORAGE"
       ]
     },
-    "web": {}
+    "web": {},
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Audio Recorder to access your microphone to record voice notes."
+        }
+      ]
+    ]
   }
 }
