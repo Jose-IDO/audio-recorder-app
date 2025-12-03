@@ -20,6 +20,7 @@ import PlaybackControls from '../components/PlaybackControls';
 import SearchBar from '../components/SearchBar';
 import SettingsButton from '../components/SettingsButton';
 import SettingsScreen from './SettingsScreen';
+import MicIcon from '../components/icons/MicIcon';
 
 const RecordingScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -33,7 +34,6 @@ const RecordingScreen = () => {
   const [currentPosition, setCurrentPosition] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
   const [showSettings, setShowSettings] = useState(false);
-  const playbackInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     initializeApp();
@@ -68,9 +68,6 @@ const RecordingScreen = () => {
       }
       if (recording) {
         recording.stopAndUnloadAsync();
-      }
-      if (playbackInterval.current) {
-        clearInterval(playbackInterval.current);
       }
     };
   }, [sound, recording]);
@@ -250,10 +247,6 @@ const RecordingScreen = () => {
     setCurrentPlayingId(null);
     setCurrentPosition('00:00');
     setDuration('00:00');
-    if (playbackInterval.current) {
-      clearInterval(playbackInterval.current);
-      playbackInterval.current = null;
-    }
   };
 
   const handleDeleteNote = async (id: string) => {
@@ -339,10 +332,15 @@ const RecordingScreen = () => {
         </Text>
         <TouchableOpacity
           style={[styles.recordButton, isRecording && styles.recordButtonActive]}
-          onPress={handleRecordPress}>
-          <Text style={styles.recordButtonText}>
-            {isRecording ? 'Stop' : 'Record'}
-          </Text>
+          onPress={handleRecordPress}
+          activeOpacity={0.8}>
+          <View style={styles.recordButtonInner}>
+            {isRecording ? (
+              <View style={styles.stopIcon} />
+            ) : (
+              <MicIcon size={48} color="#fff" />
+            )}
+          </View>
         </TouchableOpacity>
       </View>
       <View style={styles.listContainer}>
@@ -356,7 +354,8 @@ const RecordingScreen = () => {
               if (!isRecording) {
                 startRecording();
               }
-            }}>
+            }}
+            activeOpacity={0.8}>
             <Text style={styles.newButtonText}>+ New</Text>
           </TouchableOpacity>
         </View>
@@ -366,11 +365,13 @@ const RecordingScreen = () => {
           renderItem={renderVoiceNote}
           keyExtractor={item => item.id}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              {searchQuery
-                ? 'No voice notes found'
-                : 'No voice notes yet'}
-            </Text>
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? 'No voice notes found'
+                  : 'No voice notes yet'}
+              </Text>
+            </View>
           }
         />
       </View>
@@ -381,80 +382,106 @@ const RecordingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    backgroundColor: '#f8fafc',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 10,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: -0.5,
   },
   status: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
+    fontSize: 15,
+    color: '#64748b',
+    marginBottom: 24,
+    fontWeight: '500',
   },
   recordButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#4CAF50',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#10b981',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowColor: '#10b981',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   recordButtonActive: {
-    backgroundColor: '#f44336',
+    backgroundColor: '#ef4444',
+    shadowColor: '#ef4444',
   },
-  recordButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  recordButtonInner: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stopIcon: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#fff',
+    borderRadius: 4,
   },
   listContainer: {
     flex: 1,
-    marginTop: 20,
+    paddingTop: 20,
   },
   listHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
   listTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: -0.3,
   },
   newButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 5,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#3b82f6',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   newButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  emptyContainer: {
+    paddingTop: 60,
+    alignItems: 'center',
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
-    marginTop: 20,
+    color: '#94a3b8',
+    fontSize: 15,
+    fontWeight: '400',
   },
 });
 

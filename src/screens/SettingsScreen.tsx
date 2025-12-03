@@ -7,6 +7,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import SettingsIcon from '../components/icons/SettingsIcon';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -35,7 +36,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({onBack}) => {
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
+        <View style={styles.headerTitleContainer}>
+          <SettingsIcon size={24} color="#6366f1" />
+          <Text style={styles.title}>Settings</Text>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -48,7 +52,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({onBack}) => {
                 styles.speedButton,
                 playbackSpeed === speed && styles.speedButtonActive,
               ]}
-              onPress={() => setPlaybackSpeed(speed)}>
+              onPress={() => setPlaybackSpeed(speed)}
+              activeOpacity={0.7}>
               <Text
                 style={[
                   styles.speedButtonText,
@@ -62,10 +67,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({onBack}) => {
       </View>
 
       <View style={styles.section}>
-        <TouchableOpacity style={styles.settingButton} onPress={handleFeedback}>
+        <TouchableOpacity
+          style={styles.settingButton}
+          onPress={handleFeedback}
+          activeOpacity={0.7}>
           <Text style={styles.settingButtonText}>Send Feedback</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.settingButton} onPress={handleSupport}>
+        <TouchableOpacity
+          style={styles.settingButton}
+          onPress={handleSupport}
+          activeOpacity={0.7}>
           <Text style={styles.settingButtonText}>Contact Support</Text>
         </TouchableOpacity>
       </View>
@@ -83,39 +94,47 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({onBack}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   header: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#e2e8f0',
   },
   backButton: {
-    marginBottom: 10,
+    marginBottom: 16,
   },
   backButtonText: {
     fontSize: 16,
-    color: '#2196F3',
+    color: '#3b82f6',
+    fontWeight: '600',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: -0.5,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     padding: 20,
-    marginTop: 10,
+    marginTop: 12,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#e2e8f0',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 15,
-    color: '#333',
+    marginBottom: 16,
+    color: '#0f172a',
+    letterSpacing: -0.3,
   },
   speedContainer: {
     flexDirection: 'row',
@@ -123,40 +142,47 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   speedButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 5,
-    backgroundColor: '#e0e0e0',
-    marginRight: 10,
-    marginBottom: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    minWidth: 60,
+    alignItems: 'center',
   },
   speedButtonActive: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
   },
   speedButtonText: {
     fontSize: 14,
-    color: '#333',
+    fontWeight: '600',
+    color: '#475569',
   },
   speedButtonTextActive: {
-    color: '#fff',
+    color: '#ffffff',
   },
   settingButton: {
-    padding: 15,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginBottom: 10,
+    padding: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   settingButtonText: {
     fontSize: 16,
-    color: '#333',
+    fontWeight: '500',
+    color: '#0f172a',
   },
   infoText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    color: '#64748b',
     textAlign: 'center',
     lineHeight: 20,
+    fontWeight: '400',
   },
 });
 
 export default SettingsScreen;
-
