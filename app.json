@@ -21,7 +21,8 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {},
@@ -32,6 +33,11 @@
           "microphonePermission": "Allow Audio Recorder to access your microphone to record voice notes."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e198c49e-7405-4315-9ff8-571b38d064c3"
+      }
+    }
   }
 }

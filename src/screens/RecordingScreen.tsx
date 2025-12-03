@@ -47,7 +47,6 @@ const RecordingScreen = () => {
       });
       await loadVoiceNotes();
     } catch (error) {
-      Alert.alert('Error', 'Failed to initialize app');
     }
   };
 
@@ -105,7 +104,16 @@ const RecordingScreen = () => {
 
     const hasPermission = await checkPermissions();
     if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Microphone permission is required to record');
+      Alert.alert(
+        'Permission Denied',
+        'Microphone permission is required to record voice notes. Please enable it in your device settings.',
+        [
+          {
+            text: 'OK',
+            style: 'default',
+          },
+        ],
+      );
       return;
     }
 
