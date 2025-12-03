@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,8 @@ import {
   Alert,
   FlatList,
 } from 'react-native';
-import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
-import {Platform} from 'react-native';
+import {Audio} from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import {
   saveVoiceNote,
   getVoiceNotes,
@@ -18,74 +17,80 @@ import {
 import {VoiceNote} from '../types/VoiceNote';
 import VoiceNoteItem from '../components/VoiceNoteItem';
 import PlaybackControls from '../components/PlaybackControls';
-
-const audioRecorderPlayer = new AudioRecorderPlayer();
+import SearchBar from '../components/SearchBar';
+import SettingsButton from '../components/SettingsButton';
+import SettingsScreen from './SettingsScreen';
+import MicIcon from '../components/icons/MicIcon';
 
 const RecordingScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingPath, setRecordingPath] = useState('');
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
+  const [filteredNotes, setFilteredNotes] = useState<VoiceNote[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [currentPosition, setCurrentPosition] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
-    loadVoiceNotes();
+    initializeApp();
   }, []);
 
-  useEffect(() => {
-    if (isPlaying) {
-      audioRecorderPlayer.addPlayBackListener(e => {
-        const minutes = Math.floor(e.currentPosition / 1000 / 60);
-        const seconds = Math.floor((e.currentPosition / 1000) % 60);
-        setCurrentPosition(
-          `${minutes.toString().padStart(2, '0')}:${seconds
-            .toString()
-            .padStart(2, '0')}`,
-        );
-
-        const totalMinutes = Math.floor(e.duration / 1000 / 60);
-        const totalSeconds = Math.floor((e.duration / 1000) % 60);
-        setDuration(
-          `${totalMinutes.toString().padStart(2, '0')}:${totalSeconds
-            .toString()
-            .padStart(2, '0')}`,
-        );
-
-        if (e.currentPosition === e.duration) {
-          stopPlayback();
-        }
+  const initializeApp = async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
       });
+      await loadVoiceNotes();
+    } catch (error) {
     }
+  };
 
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredNotes(voiceNotes);
+    } else {
+      const filtered = voiceNotes.filter(note =>
+        note.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+      setFilteredNotes(filtered);
+    }
+  }, [searchQuery, voiceNotes]);
+
+  useEffect(() => {
     return () => {
-      audioRecorderPlayer.removePlayBackListener();
+      if (sound) {
+        sound.unloadAsync();
+      }
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
     };
-  }, [isPlaying]);
+  }, [sound, recording]);
 
   const loadVoiceNotes = async () => {
     const notes = await getVoiceNotes();
-    setVoiceNotes(notes);
+    const sortedNotes = notes.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+    setVoiceNotes(sortedNotes);
   };
 
   const checkPermissions = async () => {
-    const permission =
-      Platform.OS === 'ios'
-        ? PERMISSIONS.IOS.MICROPHONE
-        : PERMISSIONS.ANDROID.RECORD_AUDIO;
-
-    const result = await check(permission);
-
-    if (result === RESULTS.GRANTED) {
+    const permissionResponse = await Audio.getPermissionsAsync();
+    if (permissionResponse.status === 'granted') {
       return true;
     }
-
-    if (result === RESULTS.DENIED) {
-      const requestResult = await request(permission);
-      return requestResult === RESULTS.GRANTED;
+    
+    if (permissionResponse.canAskAgain) {
+      const newPermissionResponse = await Audio.requestPermissionsAsync();
+      return newPermissionResponse.status === 'granted';
     }
-
+    
     return false;
   };
 
@@ -95,23 +100,31 @@ const RecordingScreen = () => {
     }
 
     const hasPermission = await checkPermissions();
-
     if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Microphone permission is required');
+      Alert.alert(
+        'Permission Denied',
+        'Microphone permission is required to record voice notes. Please enable it in your device settings.',
+        [
+          {
+            text: 'OK',
+            style: 'default',
+          },
+        ],
+      );
       return;
     }
 
     try {
-      const timestamp = Date.now();
-      const path = Platform.select({
-        ios: `voiceNote_${timestamp}.m4a`,
-        android: `sdcard/voiceNote_${timestamp}.mp4`,
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
       });
 
-      const result = await audioRecorderPlayer.startRecorder(path);
-      audioRecorderPlayer.addRecordBackListener(() => {});
+      const {recording: newRecording} = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
 
-      setRecordingPath(result);
+      setRecording(newRecording);
       setIsRecording(true);
     } catch (error) {
       Alert.alert('Error', 'Failed to start recording');
@@ -119,25 +132,39 @@ const RecordingScreen = () => {
   };
 
   const stopRecording = async () => {
+    if (!recording) {
+      return;
+    }
+
     try {
-      const result = await audioRecorderPlayer.stopRecorder();
-      audioRecorderPlayer.removeRecordBackListener();
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
       setIsRecording(false);
+      setRecording(null);
 
-      const timestamp = Date.now();
-      const newNote: VoiceNote = {
-        id: timestamp.toString(),
-        name: `Voice Note ${new Date(timestamp).toLocaleDateString()}`,
-        path: result,
-        date: new Date(timestamp).toISOString(),
-        duration: 0,
-      };
+      if (uri) {
+        const timestamp = Date.now();
+        const fileName = `voiceNote_${timestamp}.m4a`;
+        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
-      await saveVoiceNote(newNote);
-      await loadVoiceNotes();
+        await FileSystem.moveAsync({
+          from: uri,
+          to: fileUri,
+        });
 
-      Alert.alert('Success', 'Recording saved');
-      setRecordingPath('');
+        const newNote: VoiceNote = {
+          id: timestamp.toString(),
+          name: `Voice Note ${new Date(timestamp).toLocaleDateString()}`,
+          path: fileUri,
+          date: new Date(timestamp).toISOString(),
+          duration: 0,
+        };
+
+        await saveVoiceNote(newNote);
+        await loadVoiceNotes();
+
+        Alert.alert('Success', 'Recording saved');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to stop recording');
     }
@@ -153,37 +180,73 @@ const RecordingScreen = () => {
 
   const playVoiceNote = async (note: VoiceNote) => {
     if (isPlaying && currentPlayingId === note.id) {
-      await audioRecorderPlayer.pausePlayer();
-      setIsPlaying(false);
+      if (sound) {
+        const status = await sound.getStatusAsync();
+        if (status.isLoaded) {
+          if (status.isPlaying) {
+            await sound.pauseAsync();
+            setIsPlaying(false);
+          } else {
+            await sound.playAsync();
+            setIsPlaying(true);
+          }
+        }
+      }
       return;
     }
 
-    if (isPlaying) {
-      await audioRecorderPlayer.stopPlayer();
-      audioRecorderPlayer.removePlayBackListener();
+    if (sound) {
+      await sound.unloadAsync();
     }
 
     try {
-      const msg = await audioRecorderPlayer.startPlayer(note.path);
-      audioRecorderPlayer.setVolume(1.0);
+      const {sound: newSound} = await Audio.Sound.createAsync(
+        {uri: note.path},
+        {shouldPlay: true},
+      );
+
+      setSound(newSound);
       setIsPlaying(true);
       setCurrentPlayingId(note.id);
+
+      newSound.setOnPlaybackStatusUpdate(status => {
+        if (status.isLoaded) {
+          const minutes = Math.floor((status.positionMillis || 0) / 1000 / 60);
+          const seconds = Math.floor(((status.positionMillis || 0) / 1000) % 60);
+          setCurrentPosition(
+            `${minutes.toString().padStart(2, '0')}:${seconds
+              .toString()
+              .padStart(2, '0')}`,
+          );
+
+          const totalMinutes = Math.floor((status.durationMillis || 0) / 1000 / 60);
+          const totalSeconds = Math.floor(((status.durationMillis || 0) / 1000) % 60);
+          setDuration(
+            `${totalMinutes.toString().padStart(2, '0')}:${totalSeconds
+              .toString()
+              .padStart(2, '0')}`,
+          );
+
+          if (status.didJustFinish) {
+            stopPlayback();
+          }
+        }
+      });
     } catch (error) {
       Alert.alert('Error', 'Failed to play recording');
     }
   };
 
   const stopPlayback = async () => {
-    try {
-      await audioRecorderPlayer.stopPlayer();
-      audioRecorderPlayer.removePlayBackListener();
-      setIsPlaying(false);
-      setCurrentPlayingId(null);
-      setCurrentPosition('00:00');
-      setDuration('00:00');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to stop playback');
+    if (sound) {
+      await sound.stopAsync();
+      await sound.unloadAsync();
+      setSound(null);
     }
+    setIsPlaying(false);
+    setCurrentPlayingId(null);
+    setCurrentPosition('00:00');
+    setDuration('00:00');
   };
 
   const handleDeleteNote = async (id: string) => {
@@ -192,6 +255,16 @@ const RecordingScreen = () => {
     }
 
     try {
+      const note = voiceNotes.find(n => n.id === id);
+      if (note) {
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(note.path);
+          if (fileInfo.exists) {
+            await FileSystem.deleteAsync(note.path);
+          }
+        } catch (error) {
+        }
+      }
       await deleteVoiceNote(id);
       await loadVoiceNotes();
       Alert.alert('Success', 'Voice note deleted');
@@ -239,40 +312,66 @@ const RecordingScreen = () => {
     );
   };
 
+  if (showSettings) {
+    return (
+      <SettingsScreen
+        onBack={() => setShowSettings(false)}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Voice Recorder</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>Voice Recorder</Text>
+          <SettingsButton onPress={() => setShowSettings(true)} />
+        </View>
         <Text style={styles.status}>
           {isRecording ? 'Recording...' : 'Ready to Record'}
         </Text>
         <TouchableOpacity
           style={[styles.recordButton, isRecording && styles.recordButtonActive]}
-          onPress={handleRecordPress}>
-          <Text style={styles.recordButtonText}>
-            {isRecording ? 'Stop' : 'Record'}
-          </Text>
+          onPress={handleRecordPress}
+          activeOpacity={0.8}>
+          <View style={styles.recordButtonInner}>
+            {isRecording ? (
+              <View style={styles.stopIcon} />
+            ) : (
+              <MicIcon size={48} color="#fff" />
+            )}
+          </View>
         </TouchableOpacity>
       </View>
       <View style={styles.listContainer}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Voice Notes ({voiceNotes.length})</Text>
+          <Text style={styles.listTitle}>
+            Voice Notes ({filteredNotes.length})
+          </Text>
           <TouchableOpacity
             style={styles.newButton}
             onPress={() => {
               if (!isRecording) {
                 startRecording();
               }
-            }}>
+            }}
+            activeOpacity={0.8}>
             <Text style={styles.newButtonText}>+ New</Text>
           </TouchableOpacity>
         </View>
+        <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
         <FlatList
-          data={voiceNotes}
+          data={filteredNotes}
           renderItem={renderVoiceNote}
           keyExtractor={item => item.id}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No voice notes yet</Text>
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? 'No voice notes found'
+                  : 'No voice notes yet'}
+              </Text>
+            </View>
           }
         />
       </View>
@@ -283,74 +382,106 @@ const RecordingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    backgroundColor: '#f8fafc',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: -0.5,
   },
   status: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
+    fontSize: 15,
+    color: '#64748b',
+    marginBottom: 24,
+    fontWeight: '500',
   },
   recordButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#4CAF50',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#10b981',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowColor: '#10b981',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   recordButtonActive: {
-    backgroundColor: '#f44336',
+    backgroundColor: '#ef4444',
+    shadowColor: '#ef4444',
   },
-  recordButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  recordButtonInner: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stopIcon: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#fff',
+    borderRadius: 4,
   },
   listContainer: {
     flex: 1,
-    marginTop: 20,
+    paddingTop: 20,
   },
   listHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
   listTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: -0.3,
   },
   newButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 5,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#3b82f6',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   newButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  emptyContainer: {
+    paddingTop: 60,
+    alignItems: 'center',
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
-    marginTop: 20,
+    color: '#94a3b8',
+    fontSize: 15,
+    fontWeight: '400',
   },
 });
 

@@ -1,5 +1,43 @@
 {
-  "name": "audio-recorder-app",
-  "displayName": "Audio Recorder"
+  "expo": {
+    "name": "Audio Recorder",
+    "slug": "audio-recorder-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.audiorecorder.app"
+    },
+    "android": {
+      "package": "com.audiorecorder.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {},
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Audio Recorder to access your microphone to record voice notes."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e198c49e-7405-4315-9ff8-571b38d064c3"
+      }
+    }
+  }
 }
-
